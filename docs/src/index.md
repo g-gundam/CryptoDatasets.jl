@@ -6,6 +6,8 @@ CurrentModule = CryptoDatasets
 
 Documentation for [CryptoDatasets](https://github.com/g-gundam/CryptoDatasets.jl).
 
+Hello, World!
+
 ```@index
 ```
 
