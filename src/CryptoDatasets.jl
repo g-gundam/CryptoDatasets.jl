@@ -123,6 +123,8 @@ function cand(c::DataFrameRow)
     Candle{NanoDate}(nd, c.o, c.h, c.l, c.c, c.v, c.v2)
 end
 
+# This should be:
+# dataset("bitmex", "XBTUSD"; tf=Hour(4), last=Day(7))
 function a5m(ca)
     reduce(ca; init=[]) do m, a
         @debug typeof(m), typeof(a)
@@ -174,22 +176,6 @@ import_json!("bitmex", "XBTUSD", "1m", srcdir=srcdir)
 
 cs = CSV.read("./data/bybit/BTCUSD/1m/20211111.csv", DataFrame; types=Dict("ts" => UInt64))
 ca = eachrow(first(cs, 10)) .|> CryptoDatasets.cand
-reduce(ca; init=[]) do m, a
-    @debug typeof(m), typeof(a)
-    if length(m) == 0
-        c = aggregate(Minute(5), a)
-        return [c]
-    else
-        if floor(DateTime(a.ts), Minute(5)) != m[end].ts
-            c = aggregate(Minute(5), a)
-            push!(m, c)
-        else
-            c = aggregate(Minute(5), a, m[end])
-            m[end] = c
-        end
-        return m
-    end
-end
-
+CryptoDatasets.a5m(ca)
 
 """
