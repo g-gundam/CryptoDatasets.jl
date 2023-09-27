@@ -1,5 +1,5 @@
 module CryptoDatasets
-using NanoDates: NanoDate0
+using NanoDates
 using JSON3
 using CSV
 using Dates
@@ -10,8 +10,8 @@ using DataFrames
 A candle containing a timestamp, OHLCV values,
 and an optional `v2` for weird exchanges that return 2 volumes.
 """
-struct Candle
-    ts::UInt64
+struct Candle{TSType}
+    ts::TSType
     o::Union{Float64,Missing}
     h::Union{Float64,Missing}
     l::Union{Float64,Missing}
@@ -65,7 +65,7 @@ function import_json!(exchange, market, timeframe; srcdir="", datadir="./data")
             if ismissing(bin)
                 # initial bin
                 c2 = _sanitize(c)
-                cc = Candle(c2...)
+                cc = Candle{UInt64}(c2...)
                 @debug "Initial", cc.ts |> Millisecond |> _millis2nanodate
                 bin = [cc]
                 current_day = floor(nd, Day)
@@ -81,7 +81,7 @@ function import_json!(exchange, market, timeframe; srcdir="", datadir="./data")
                 # create new bin
                 @debug "Write"
                 c2 = _sanitize(c)
-                cc = Candle(c2...)
+                cc = Candle{UInt64}(c2...)
                 bin = [cc]
                 current_day = floor(nd, Day)
                 next_day = current_day + Day(1)
@@ -89,7 +89,7 @@ function import_json!(exchange, market, timeframe; srcdir="", datadir="./data")
             else
                 # push to existing bin
                 c2 = _sanitize(c)
-                cc = Candle(c2...)
+                cc = Candle{UInt64}(c2...)
                 #@debug "Existing", cc.ts |> Millisecond |> _millis2nanodate
                 push!(bin, cc)
             end
@@ -102,6 +102,44 @@ function import_json!(exchange, market, timeframe; srcdir="", datadir="./data")
         CSV.write(outfile, bin |> DataFrame)
     end
     write
+end
+
+function aggregate(tf::Period, ca::Candle, previous::Union{Candle,Missing}=missing)
+    if ismissing(previous)
+        return ca
+    end
+    C = typeof(ca)
+    o = ca.o
+    h = ca.h < previous.h ? previous.h : ca.h
+    l = ca.l > previous.l ? previous.l : ca.l
+    c = previous.c
+    v = previous.v
+    v2 = previous.v2
+    C(floor(DateTime(ca.ts), tf), o, h, l, c, v, v2)
+end
+
+function cand(c::DataFrameRow)
+    nd = _millis2nanodate(Millisecond(c.ts))
+    Candle{NanoDate}(nd, c.o, c.h, c.l, c.c, c.v, c.v2)
+end
+
+function a5m(ca)
+    reduce(ca; init=[]) do m, a
+        @debug typeof(m), typeof(a)
+        if length(m) == 0
+            c = aggregate(Minute(5), a)
+            return [c]
+        else
+            if floor(DateTime(a.ts), Minute(5)) != m[end].ts
+                c = aggregate(Minute(5), a)
+                push!(m, c)
+            else
+                c = aggregate(Minute(5), a, m[end])
+                m[end] = c
+            end
+            return m
+        end
+    end
 end
 
 const Time0 = DateTime(1970, 1, 1)
@@ -122,14 +160,36 @@ end
 # REPL init
 
 using CryptoDatasets
-using CryptoDatasets: import_json!, Candle
+using CryptoDatasets: Candle
+using CryptoDatasets: import_json!, aggregate
 using Dates
 using NanoDates
 using CSV
 using JSON3
 using DataFrames
+using TimeSeries
 
 srcdir = "$(ENV["HOME"])/src/git.coom.tech/gg1234/ta/data"
 import_json!("bitmex", "XBTUSD", "1m", srcdir=srcdir)
+
+cs = CSV.read("./data/bybit/BTCUSD/1m/20211111.csv", DataFrame; types=Dict("ts" => UInt64))
+ca = eachrow(first(cs, 10)) .|> CryptoDatasets.cand
+reduce(ca; init=[]) do m, a
+    @debug typeof(m), typeof(a)
+    if length(m) == 0
+        c = aggregate(Minute(5), a)
+        return [c]
+    else
+        if floor(DateTime(a.ts), Minute(5)) != m[end].ts
+            c = aggregate(Minute(5), a)
+            push!(m, c)
+        else
+            c = aggregate(Minute(5), a, m[end])
+            m[end] = c
+        end
+        return m
+    end
+end
+
 
 """
