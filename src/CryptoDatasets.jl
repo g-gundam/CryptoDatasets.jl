@@ -32,10 +32,20 @@ end
 """
 _sanitize()
 
+Take a row from the JSON import and make it suitable for writing out as a
+CSV row.
+
 # Examples
 ```jldoctest
-julia> _sanitize(c)
-[]
+julia> CryptoDatasets._sanitize([1636675140000, 1, 2, 0.5, 1, 1])
+7-element Vector{Any}:
+ 1.63667514e12
+ 1.0
+ 2.0
+ 0.5
+ 1.0
+ 1.0
+  missing
 ```
 """
 function _sanitize(c)
