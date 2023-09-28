@@ -21,7 +21,7 @@ struct Candle{TSType}
 end
 
 """
-    dataset(exchange, market) => Vector{Any}
+dataset(exchange, market) => Vector{Any}
 
 Return OHLC candles for the given exchange and market.
 """
@@ -29,6 +29,15 @@ function dataset(exchange, market)
     [42, exchange, market]
 end
 
+"""
+_sanitize()
+
+# Examples
+```jldoctest
+julia> _sanitize(c)
+[]
+```
+"""
 function _sanitize(c)
     c2 = []
     for i in c
