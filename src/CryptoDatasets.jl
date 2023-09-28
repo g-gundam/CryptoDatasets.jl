@@ -21,12 +21,23 @@ struct Candle{TSType}
 end
 
 """
-dataset(exchange, market) => Vector{Any}
+dataset(exchange, market; tf::Period, dates) => Vector{Any}
 
 Return OHLC candles for the given exchange and market.
 """
-function dataset(exchange, market)
-    [42, exchange, market]
+function dataset(exchange, market; tf="1m", datadir="./data")
+    indir = joinpath(datadir, exchange, market, tf)
+    cfs = readdir(indir; join=true)[1:3]
+    res = missing
+    for cf in cfs
+        csv = CSV.read(cf, DataFrame)
+        if ismissing(res)
+            res = csv
+        else
+            append!(res, csv)
+        end
+    end
+    res
 end
 
 """
@@ -63,11 +74,16 @@ function _sanitize(c)
     c2
 end
 
-function import_json!(exchange, market, timeframe; srcdir="", datadir="./data")
-    dir = joinpath(srcdir, exchange, market, timeframe)
+"""
+import_json!(exchange, market, timeframe)
+
+Import data from a previous project of mine that stored this info in JSON files.
+"""
+function import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", last=true)
+    dir = joinpath(srcdir, exchange, market, tf)
     jfs = readdir(dir; join=true)
     write = []
-    outdir = joinpath(datadir, exchange, market, timeframe)
+    outdir = joinpath(datadir, exchange, market, tf)
     mkpath(outdir)
 
     # I want to fill a fixed-size bin with candles until it's full.
@@ -182,7 +198,7 @@ end
 
 using CryptoDatasets
 using CryptoDatasets: Candle
-using CryptoDatasets: import_json!, aggregate
+using CryptoDatasets: import_json!, aggregate, dataset
 using Dates
 using NanoDates
 using CSV
@@ -191,10 +207,10 @@ using DataFrames
 using TimeSeries
 
 srcdir = "$(ENV["HOME"])/src/git.coom.tech/gg1234/ta/data"
-import_json!("bitmex", "XBTUSD", "1m", srcdir=srcdir)
+import_json!("bitmex", "XBTUSD"; srcdir=srcdir)
 
 cs = CSV.read("./data/bybit/BTCUSD/1m/20211111.csv", DataFrame; types=Dict("ts" => UInt64))
-ca = eachrow(first(cs, 10)) .|> CryptoDatasets.cand
+ca = eachrow(first(cs, 60)) .|> CryptoDatasets.cand
 CryptoDatasets.a5m(ca)
 
 """
