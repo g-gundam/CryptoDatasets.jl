@@ -20,14 +20,41 @@ struct Candle{TSType}
     v2::Union{Float64,Missing} # only bitget uses this
 end
 
+function _filename_to_date(f)
+    ds = replace(basename(f), ".csv" => "")
+    m = match(r"(\d{4})(\d{2})(\d{2})", ds)
+    Date(parse.(Int32, m.captures)...)
+end
+
+function _d2i(d::Date, cfs)
+    a = _filename_to_date(first(cfs))
+    b = _filename_to_date(last(cfs))
+    if a <= d <= b
+        diff = d - a
+        return diff.value + 1
+    else
+        missing
+    end
+end
+
 """
 dataset(exchange, market; tf::Period, dates) => Vector{Any}
 
 Return OHLC candles for the given exchange and market.
 """
-function dataset(exchange, market; tf="1m", datadir="./data")
+function dataset(exchange, market; tf="1m", datadir="./data", span=missing)
     indir = joinpath(datadir, exchange, market, tf)
-    cfs = readdir(indir; join=true)[1:3]
+    cfs = readdir(indir; join=true)
+    if !ismissing(span)
+        if typeof(span) == UnitRange
+            cfs = cfs[span]
+        elseif typeof(span) == StepRange
+            # convert span to UnitRange
+            a = _d2i(first(span), cfs)
+            b = _d2i(last(span), cfs)
+            cfs = cfs[range(a, b)]
+        end
+    end
     res = missing
     for cf in cfs
         csv = CSV.read(cf, DataFrame)
@@ -79,7 +106,7 @@ import_json!(exchange, market, timeframe)
 
 Import data from a previous project of mine that stored this info in JSON files.
 """
-function import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", last=true)
+function import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", sincelast=true)
     dir = joinpath(srcdir, exchange, market, tf)
     jfs = readdir(dir; join=true)
     write = []
@@ -182,6 +209,8 @@ end
 const Time0 = DateTime(1970, 1, 1)
 
 _millis2nanodate(millis::Millisecond) = Time0 + millis
+
+#Base.tryparse(t::NanoDate, s) = _millis2nanodate(Millisecond(parse(UInt64, s)))
 
 end
 
