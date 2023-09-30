@@ -46,9 +46,9 @@ function dataset(exchange, market; tf="1m", datadir="./data", span=missing)
     indir = joinpath(datadir, exchange, market, tf)
     cfs = readdir(indir; join=true)
     if !ismissing(span)
-        if typeof(span) == UnitRange
+        if typeof(span) <: UnitRange
             cfs = cfs[span]
-        elseif typeof(span) == StepRange
+        elseif typeof(span) <: StepRange
             # convert span to UnitRange
             a = _d2i(first(span), cfs)
             b = _d2i(last(span), cfs)
