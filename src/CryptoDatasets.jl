@@ -57,7 +57,8 @@ function dataset(exchange, market; tf="1m", datadir="./data", span=missing)
     end
     res = missing
     for cf in cfs
-        csv = CSV.read(cf, DataFrame)
+        csv = CSV.read(cf, DataFrame; types=Dict(:ts => UInt64))
+        csv[!, :ts] = convert.(NanoDate, csv[!, :ts])
         if ismissing(res)
             res = csv
         else
@@ -210,7 +211,14 @@ const Time0 = DateTime(1970, 1, 1)
 
 _millis2nanodate(millis::Millisecond) = Time0 + millis
 
-#Base.tryparse(t::NanoDate, s) = _millis2nanodate(Millisecond(parse(UInt64, s)))
+_unix_epoch_ms =
+    Dates.value(unix2datetime(0)) +
+    abs(Dates.value(Dates.epochms2datetime(0)))
+function _unixms2datetime(ms)
+    Dates.epochms2datetime(_unix_epoch_ms + ms)
+end
+
+Base.convert(::Type{NanoDate}, ts::UInt64) = _millis2nanodate(Millisecond(ts))
 
 end
 
@@ -228,12 +236,12 @@ end
 using CryptoDatasets
 using CryptoDatasets: Candle
 using CryptoDatasets: import_json!, aggregate, dataset
+using CSV
 using Dates
 using NanoDates
-using CSV
 using JSON3
 using DataFrames
-using TimeSeries
+#using TimeSeries
 
 srcdir = "$(ENV["HOME"])/src/git.coom.tech/gg1234/ta/data"
 import_json!("bitmex", "XBTUSD"; srcdir=srcdir)
