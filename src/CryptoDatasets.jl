@@ -195,23 +195,6 @@ Base.convert(::Type{NanoDate}, ts::UInt64) = _millis2nanodate(Millisecond(ts))
 
 end
 
-x = zip(1:10, 11:20)
-y = foldl(x; init=[]) do m, a
-    if length(m) == 0
-        # first iteration
-        return [a[2]]
-    else
-        if (a[1] - 1) % 5 == 0
-            # introduce a new value after every 5 items in x
-            push!(m, a[2])
-        else
-            # sum
-            m[end] += a[2]
-        end
-        return m
-    end
-end
-
 # This is a hack I learned from the forum that allows
 # LSP to recognize the current package when editing scripts.
 # https://discourse.julialang.org/t/lsp-missing-reference-woes/98231/16
