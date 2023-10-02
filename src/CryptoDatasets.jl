@@ -191,13 +191,6 @@ const Time0 = DateTime(1970, 1, 1)
 
 _millis2nanodate(millis::Millisecond) = Time0 + millis
 
-_unix_epoch_ms =
-    Dates.value(unix2datetime(0)) +
-    abs(Dates.value(Dates.epochms2datetime(0)))
-function _unixms2datetime(ms)
-    Dates.epochms2datetime(_unix_epoch_ms + ms)
-end
-
 Base.convert(::Type{NanoDate}, ts::UInt64) = _millis2nanodate(Millisecond(ts))
 
 end
