@@ -235,13 +235,36 @@ end
 
 using CryptoDatasets
 using CryptoDatasets: Candle
-using CryptoDatasets: import_json!, aggregate, dataset
+using CryptoDatasets: import_json!, _ohlc, dataset
 using CSV
 using Dates
 using NanoDates
 using JSON3
+using TimeSeries
 using DataFrames
-#using TimeSeries
+using DataFramesMeta
+
+btcusd30m = @chain btcusd begin
+    @transform(:ts2 = floor.(:ts, Minute(30)))
+    groupby(:ts2)
+    @combine begin
+        :o = first(:o)
+        :h = maximum(:h)
+        :l = minimum(:l)
+        :c = last(:c)
+        :v = last(:v)
+        :v2 = last(:v2)
+    end
+    @select(:ts = :ts2, :o, :h, :l, :c, :v, :v2)
+end
+
+df = DataFrame(k=0:9, v=11:20)
+df2 = @chain df begin
+    @transform(:gb = floor.(:k / 5))
+    groupby(:gb)
+    @combine(:s = sum(:v))
+    @select(:s)
+end
 
 srcdir = "$(ENV["HOME"])/src/git.coom.tech/gg1234/ta/data"
 import_json!("bitmex", "XBTUSD"; srcdir=srcdir)
