@@ -231,7 +231,7 @@ end
 
 using CryptoDatasets
 using CryptoDatasets: Candle
-using CryptoDatasets: import_json!, _ohlc, dataset
+using CryptoDatasets: import_json!, dataset
 using CSV
 using Dates
 using NanoDates
@@ -240,6 +240,7 @@ using TimeSeries
 using DataFrames
 using DataFramesMeta
 
+# How to do candle aggregation the Julia+DataFrame way
 btcusd30m = @chain btcusd begin
     @transform(:ts2 = floor.(:ts, Minute(30)))
     groupby(:ts2)
@@ -254,6 +255,7 @@ btcusd30m = @chain btcusd begin
     @select(:ts = :ts2, :o, :h, :l, :c, :v, :v2)
 end
 
+# How to do aggregation in general
 df = DataFrame(k=0:9, v=11:20)
 df2 = @chain df begin
     @transform(:gb = floor.(:k / 5))
@@ -262,11 +264,8 @@ df2 = @chain df begin
     @select(:s)
 end
 
+# How to import my old JSON data into CryptoDatasets
 srcdir = "$(ENV["HOME"])/src/git.coom.tech/gg1234/ta/data"
 import_json!("bitmex", "XBTUSD"; srcdir=srcdir)
-
-cs = CSV.read("./data/bybit/BTCUSD/1m/20211111.csv", DataFrame; types=Dict("ts" => UInt64))
-ca = eachrow(first(cs, 60)) .|> CryptoDatasets.cand
-CryptoDatasets.a5m(ca)
 
 """
