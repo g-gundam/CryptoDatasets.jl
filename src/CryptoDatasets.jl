@@ -5,6 +5,7 @@ using CSV
 using Dates
 using NanoDates
 using DataFrames
+using DataFramesMeta
 
 """
 A candle containing a timestamp, OHLCV values,
@@ -26,6 +27,7 @@ function _filename_to_date(f)
     Date(parse.(Int32, m.captures)...)
 end
 
+# date to index in span
 function _d2i(d::Date, cfs)
     a = _filename_to_date(first(cfs))
     b = _filename_to_date(last(cfs))
@@ -42,8 +44,8 @@ dataset(exchange, market; tf::Period, dates) => Vector{Any}
 
 Return OHLC candles for the given exchange and market.
 """
-function dataset(exchange, market; tf="1m", datadir="./data", span=missing)
-    indir = joinpath(datadir, exchange, market, tf)
+function dataset(exchange, market; srctf="1m", datadir="./data", span=missing, tf::Period=missing)
+    indir = joinpath(datadir, exchange, market, srctf)
     cfs = readdir(indir; join=true)
     if !ismissing(span)
         if typeof(span) <: UnitRange
@@ -65,7 +67,25 @@ function dataset(exchange, market; tf="1m", datadir="./data", span=missing)
             append!(res, csv)
         end
     end
-    res
+
+    # Do optional timeframe summarization
+    if ismissing(tf)
+        return res
+    else
+        return @chain res begin
+            @transform(:ts2 = floor.(:ts, tf))
+            groupby(:ts2) # LSP doesn't know the @chain macro is doing magic.
+            @combine begin
+                :o = first(:o)
+                :h = maximum(:h)
+                :l = minimum(:l)
+                :c = last(:c)
+                :v = sum(:v)
+                :v2 = sum(:v2)
+            end
+            @select(:ts = :ts2, :o, :h, :l, :c, :v, :v2)
+        end
+    end
 end
 
 """
@@ -167,46 +187,6 @@ function import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", si
     write
 end
 
-function aggregate(tf::Period, ca::Candle, previous::Union{Candle,Missing}=missing)
-    if ismissing(previous)
-        return ca
-    end
-    C = typeof(ca)
-    o = ca.o
-    h = ca.h < previous.h ? previous.h : ca.h
-    l = ca.l > previous.l ? previous.l : ca.l
-    c = previous.c
-    v = previous.v
-    v2 = previous.v2
-    C(floor(DateTime(ca.ts), tf), o, h, l, c, v, v2)
-end
-
-function cand(c::DataFrameRow)
-    nd = _millis2nanodate(Millisecond(c.ts))
-    Candle{NanoDate}(nd, c.o, c.h, c.l, c.c, c.v, c.v2)
-end
-
-# This should be:
-# dataset("bitmex", "XBTUSD"; tf=Hour(4), last=Day(7))
-function a5m(ca)
-    reduce(ca; init=[]) do m, a
-        @debug typeof(m), typeof(a)
-        if length(m) == 0
-            c = aggregate(Minute(5), a)
-            return [c]
-        else
-            if floor(DateTime(a.ts), Minute(5)) != m[end].ts
-                c = aggregate(Minute(5), a)
-                push!(m, c)
-            else
-                c = aggregate(Minute(5), a, m[end])
-                m[end] = c
-            end
-            return m
-        end
-    end
-end
-
 const Time0 = DateTime(1970, 1, 1)
 
 _millis2nanodate(millis::Millisecond) = Time0 + millis
@@ -222,6 +202,22 @@ Base.convert(::Type{NanoDate}, ts::UInt64) = _millis2nanodate(Millisecond(ts))
 
 end
 
+x = zip(1:10, 11:20)
+y = foldl(x; init=[]) do m, a
+    if length(m) == 0
+        # first iteration
+        return [a[2]]
+    else
+        if (a[1] - 1) % 5 == 0
+            # introduce a new value after every 5 items in x
+            push!(m, a[2])
+        else
+            # sum
+            m[end] += a[2]
+        end
+        return m
+    end
+end
 
 # This is a hack I learned from the forum that allows
 # LSP to recognize the current package when editing scripts.
