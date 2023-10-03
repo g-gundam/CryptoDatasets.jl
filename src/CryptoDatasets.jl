@@ -44,7 +44,7 @@ dataset(exchange, market; tf::Period, dates) => Vector{Any}
 
 Return OHLC candles for the given exchange and market.
 """
-function dataset(exchange, market; srctf="1m", datadir="./data", span=missing, tf::Period=missing)
+function dataset(exchange, market; srctf="1m", datadir="./data", span=missing, tf::Period=Minute(1))
     indir = joinpath(datadir, exchange, market, srctf)
     cfs = readdir(indir; join=true)
     if !ismissing(span)
@@ -129,7 +129,7 @@ Import data from a previous project of mine that stored this info in JSON files.
 """
 function import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", sincelast=true)
     dir = joinpath(srcdir, exchange, market, tf)
-    jfs = readdir(dir; join=true)
+    jfs = readdir(dir; join=true) # jfs means JSON files
     write = []
     outdir = joinpath(datadir, exchange, market, tf)
     mkpath(outdir)
