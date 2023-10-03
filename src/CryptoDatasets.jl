@@ -123,11 +123,11 @@ function _sanitize(c)
 end
 
 """
-import_json!(exchange, market, timeframe)
+_import_json!(exchange, market, timeframe)
 
 Import data from a previous project of mine that stored this info in JSON files.
 """
-function import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", sincelast=true)
+function _import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", sincelast=true)
     dir = joinpath(srcdir, exchange, market, tf)
     jfs = readdir(dir; join=true) # jfs means JSON files
     write = []
@@ -207,7 +207,7 @@ end
 
 using CryptoDatasets
 using CryptoDatasets: Candle
-using CryptoDatasets: import_json!, dataset
+using CryptoDatasets: _import_json!, dataset
 using CSV
 using Dates
 using NanoDates
@@ -242,6 +242,6 @@ end
 
 # How to import my old JSON data into CryptoDatasets
 srcdir = "$(ENV["HOME"])/src/git.coom.tech/gg1234/ta/data"
-import_json!("bitmex", "XBTUSD"; srcdir=srcdir)
+_import_json!("bitmex", "XBTUSD"; srcdir=srcdir)
 
 """
