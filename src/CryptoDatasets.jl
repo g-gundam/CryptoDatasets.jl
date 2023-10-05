@@ -215,6 +215,9 @@ using TimeSeries
 using DataFrames
 using DataFramesMeta
 
+# load btcusd
+btcusd = dataset("bybit", "BTCUSD", span=Date("2023-03-01"):Date("2023-03-07"))
+
 # How to do candle aggregation the Julia+DataFrame way
 btcusd30m = @chain btcusd begin
     @transform(:ts2 = floor.(:ts, Minute(30)))
