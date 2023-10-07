@@ -243,8 +243,8 @@ btcusd30m = @chain btcusd begin
         :h = maximum(:h)
         :l = minimum(:l)
         :c = last(:c)
-        :v = last(:v)
-        :v2 = last(:v2)
+        :v = sum(:v)
+        :v2 = sum(:v2)
     end
     @select(:ts = :ts2, :o, :h, :l, :c, :v, :v2)
 end
