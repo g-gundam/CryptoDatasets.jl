@@ -129,7 +129,7 @@ end
 
 function _unix_ms(filename)
     ms = replace(filename, ".csv" => "") |> DateTime |> datetime2unix |> ts -> ts * 1000
-    @sprintf "%d" ms
+    convert(Int64, ms)
 end
 
 """
@@ -146,7 +146,19 @@ function _import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", s
     mkpath(outdir)
 
     # fast forward to where we left off.
+    start = 1
+    _skip_first_write = false
     if sincelast
+        ms = _unix_ms(_last_csv(outdir))
+        i = findfirst(jfs) do f
+            bf = basename(f)
+            n = parse(Int64, replace(bf, ".json" => ""))
+            n > ms
+        end
+        if !isnothing(i)
+            start = i - 1
+            _skip_first_write = true
+        end
     end
 
     # I want to fill a fixed-size bin with candles until it's full.
@@ -156,7 +168,7 @@ function _import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", s
     bin = missing
     current_day = missing
     next_day = missing
-    for jf in jfs
+    for jf in jfs[start:end]
         candles = jf |> read |> JSON3.read
         for c in candles
             nd = _millis2nanodate(Millisecond(c[1]))
@@ -171,13 +183,18 @@ function _import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", s
                 continue
             elseif floor(nd, Day) == next_day
                 # write out bin
-                @info "Write $current_day : $(length(bin)) candles"
                 push!(write, bin)
                 outfile = outdir * "/" * NanoDates.format(current_day, "yyyy-mm-dd") * ".csv"
                 bindf = bin |> DataFrame
-                CSV.write(outfile, bindf)
+                if _skip_first_write
+                    @debug "Skipping first write"
+                    _skip_first_write = false
+                else
+                    @info "Write $current_day : $(length(bin)) candles"
+                    CSV.write(outfile, bindf)
+                end
                 # create new bin
-                @debug "Write"
+                @debug "New Bin"
                 c2 = _sanitize(c)
                 cc = Candle{UInt64}(c2...)
                 bin = [cc]
