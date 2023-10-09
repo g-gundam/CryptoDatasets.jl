@@ -5,6 +5,7 @@ using Dates
 using NanoDates
 using DataFrames
 using DataFramesMeta
+using Printf
 
 """
 A candle containing a timestamp, OHLCV values,
@@ -121,6 +122,16 @@ function _sanitize(c)
     c2
 end
 
+function _last_csv(outdir)
+    cfs = readdir(outdir)
+    cfs[end]
+end
+
+function _unix_ms(filename)
+    ms = replace(filename, ".csv" => "") |> DateTime |> datetime2unix |> ts -> ts * 1000
+    @printf "%d" ms
+end
+
 """
 _import_json!(exchange, market, timeframe)
 
@@ -129,9 +140,14 @@ Import data from a previous project of mine that stored this info in JSON files.
 function _import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", sincelast=true)
     dir = joinpath(srcdir, exchange, market, tf)
     jfs = readdir(dir; join=true) # jfs means JSON files
+
     write = []
     outdir = joinpath(datadir, exchange, market, tf)
     mkpath(outdir)
+
+    # fast forward to where we left off.
+    if sincelast
+    end
 
     # I want to fill a fixed-size bin with candles until it's full.
     # Then I want to write the bin to a file.
@@ -155,9 +171,9 @@ function _import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", s
                 continue
             elseif floor(nd, Day) == next_day
                 # write out bin
-                @info "Pretend to Write $current_day : $(length(bin)) candles"
+                @info "Write $current_day : $(length(bin)) candles"
                 push!(write, bin)
-                outfile = outdir * "/" * NanoDates.format(current_day, "yyyymmdd") * ".csv"
+                outfile = outdir * "/" * NanoDates.format(current_day, "yyyy-mm-dd") * ".csv"
                 bindf = bin |> DataFrame
                 CSV.write(outfile, bindf)
                 # create new bin
@@ -180,7 +196,7 @@ function _import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", s
     if length(bin) > 0
         @info "Last Write", current_day
         push!(write, bin)
-        outfile = outdir * "/" * NanoDates.format(current_day, "yyyymmdd") * ".csv"
+        outfile = outdir * "/" * NanoDates.format(current_day, "yyyy-mm-dd") * ".csv"
         CSV.write(outfile, bin |> DataFrame)
     end
     write
@@ -226,8 +242,8 @@ btcusd30m = @chain btcusd begin
         :h = maximum(:h)
         :l = minimum(:l)
         :c = last(:c)
-        :v = last(:v)
-        :v2 = last(:v2)
+        :v = sum(:v)
+        :v2 = sum(:v2)
     end
     @select(:ts = :ts2, :o, :h, :l, :c, :v, :v2)
 end
