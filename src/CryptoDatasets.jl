@@ -129,7 +129,7 @@ end
 
 function _unix_ms(filename)
     ms = replace(filename, ".csv" => "") |> DateTime |> datetime2unix |> ts -> ts * 1000
-    @printf "%d" ms
+    @sprintf "%d" ms
 end
 
 """
