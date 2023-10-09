@@ -211,7 +211,6 @@ using CSV
 using Dates
 using NanoDates
 using JSON3
-using TimeSeries
 using DataFrames
 using DataFramesMeta
 
