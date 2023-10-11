@@ -23,7 +23,7 @@ end
 
 function _filename_to_date(f)
     ds = replace(basename(f), ".csv" => "")
-    m = match(r"(\d{4})(\d{2})(\d{2})", ds)
+    m = match(r"(\d{4})-(\d{2})-(\d{2})", ds)
     Date(parse.(Int32, m.captures)...)
 end
 
