@@ -165,7 +165,7 @@ function _import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", s
             end
             if !isnothing(i)
                 start = i - 1
-                _skip_first_write = true
+                _skip_first_write = true # XXX - I only want to skip if it's not a full day of candles.
             end
         end
     end
