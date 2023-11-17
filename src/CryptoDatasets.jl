@@ -40,7 +40,7 @@ function _d2i(d::Date, cfs)
 end
 
 """
-dataset(exchange, market; tf::Period, dates) => Vector{Any}
+dataset(exchange, market; srctf="1m", datadir="./data", tf::Period, dates) => Vector{Any}
 
 Return OHLC candles for the given exchange and market.
 """
