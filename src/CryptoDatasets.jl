@@ -124,7 +124,11 @@ end
 
 function _last_csv(outdir)
     cfs = readdir(outdir)
-    cfs[end]
+    if length(cfs) == 0
+        missing
+    else
+        cfs[end]
+    end
 end
 
 function _unix_ms(filename)
@@ -149,15 +153,20 @@ function _import_json!(exchange, market; tf="1m", srcdir="", datadir="./data", s
     start = 1
     _skip_first_write = false
     if sincelast
-        ms = _unix_ms(_last_csv(outdir))
-        i = findfirst(jfs) do f
-            bf = basename(f)
-            n = parse(Int64, replace(bf, ".json" => ""))
-            n > ms
-        end
-        if !isnothing(i)
-            start = i - 1
-            _skip_first_write = true
+        csv_name = _last_csv(outdir)
+        if ismissing(csv_name)
+            start = 1
+        else
+            ms = _unix_ms(csv_name)
+            i = findfirst(jfs) do f
+                bf = basename(f)
+                n = parse(Int64, replace(bf, ".json" => ""))
+                n > ms
+            end
+            if !isnothing(i)
+                start = i - 1
+                _skip_first_write = true # XXX - I only want to skip if it's not a full day of candles.
+            end
         end
     end
 
