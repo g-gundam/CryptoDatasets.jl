@@ -21,6 +21,8 @@ struct Candle{TSType}
     v2::Union{Float64,Missing} # only bitget uses this
 end
 
+include("exchanges.jl")
+
 function _filename_to_date(f)
     ds = replace(basename(f), ".csv" => "")
     m = match(r"(\d{4})-(\d{2})-(\d{2})", ds)
@@ -231,6 +233,8 @@ end
 const Time0 = DateTime(1970, 1, 1)
 
 _millis2nanodate(millis::Millisecond) = Time0 + millis
+# [2023-12-07 Thu 14:18] A few days ago, I realized that NanoDates.unixmillis2nanodate
+# already existed.  It wasn't documented though.
 
 Base.convert(::Type{NanoDate}, ts::UInt64) = _millis2nanodate(Millisecond(ts))
 
